@@ -1,5 +1,5 @@
 # it-s-not-you-it-s-me-individual-difference-paper
-A repository of my dissertation (brief report), with the initial submitted manuscript and code.
+A repository of my dissertation (brief report).
 
 We had 43 experimenters call ~600 businesses each. They asked either _At/What time do you close_? When asked prepositional questions, participants used prepositions in their answers (i.e., _We close at 10, Around 10_). 
 
