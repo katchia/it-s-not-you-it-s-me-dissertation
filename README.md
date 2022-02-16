@@ -1,4 +1,4 @@
-# it-s-not-you-it-s-me-individual-difference-paper
+# it-s-not-you-it-s-me-dissertation
 
 ![splithalfplot](https://github.com/katchia/it-s-not-you-it-s-me-individual-difference-paper/blob/main/splithalfplot.jpeg)
 A repository of my dissertation (brief report).
