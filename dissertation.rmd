@@ -1,0 +1,670 @@
+---
+title: "Untitled"
+author: "kat"
+date: "2/10/2022"
+output:
+  html_document:
+    code_folding: hide
+    theme: yeti
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+---
+
+## Preliminary stuff
+
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(lme4)
+library(readxl)
+library(extrafont)
+library(sysfonts)
+library(irr)
+library(lavaan)
+library(lavaanPlot)
+library(DiagrammeRsvg)
+
+font_add_google("Source Sans Pro")
+
+dat <- read_excel("dissertation - anon.xlsx")
+```
+
+
+## Overall Analyses {.tabset}
+
+### Overall, Inclusive, no slope
+```{r}
+overall_inclusive <- glmer(inclusive ~ questiontype * fragcode + (1|experimenter), dat, binomial)
+summary(overall_inclusive)
+```
+
+
+### Overall, Inclusive, with slope
+```{r}
+overall_inclusive_slope <- glmer(inclusive ~ questiontype * fragcode + (1 + questiontype | experimenter), dat, binomial)
+summary(overall_inclusive_slope)
+```
+
+
+### Inclusive Model Comparison
+```{r}
+anova(overall_inclusive, overall_inclusive_slope)
+```
+
+
+### Reliability 
+
+#### Splithalf - Overall, All Data
+```{r}
+overall_sh1_noprep <- dat %>%
+  select(experimenter, round, questiontype, inclusive, splithalf) %>%
+  filter(splithalf == 1 & questiontype == 'noprep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+overall_sh1_prep <- dat %>%
+  select(experimenter, round, questiontype, inclusive, splithalf) %>%
+  filter(splithalf == 1 & questiontype == 'prep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+overall_sh2_noprep <- dat %>%
+  select(experimenter, round, questiontype, inclusive, splithalf) %>%
+  filter(splithalf == 2 & questiontype == 'noprep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+overall_sh2_prep <- dat %>%
+  select(experimenter, round, questiontype, inclusive, splithalf) %>%
+  filter(splithalf == 2 & questiontype == 'prep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+overall_sh1_difference <- overall_sh1_prep$meanresponse - overall_sh1_noprep$meanresponse
+
+overall_sh2_difference <- overall_sh2_prep$meanresponse - overall_sh2_noprep$meanresponse
+
+
+cor.test(overall_sh1_difference, overall_sh2_difference)
+```
+
+
+#### ICC for Splithalf - Overall, All Data
+```{r}
+#make the two priming effects kith
+overall_prime_sh1 <- as.data.frame(overall_sh1_difference)
+overall_prime_sh2 <- as.data.frame(overall_sh2_difference)
+
+overall_primes_sh <- cbind(overall_prime_sh1, overall_prime_sh2)
+
+icc(overall_primes_sh, model = "twoway", type = "agreement", unit = "single")
+```
+
+
+#### Test-Retest - Overall, All Data
+```{r}
+overall_round1_reliability_noprep <- dat %>%
+  filter(round == 1) %>%
+  select(experimenter, round, questiontype, inclusive, term) %>%
+  filter(questiontype == 'noprep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+overall_round1_reliability_prep <- dat %>%
+  filter(round == 1) %>%
+  select(experimenter, round, questiontype, inclusive, term) %>%
+  filter(questiontype == 'prep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+overall_round2_reliability_noprep <- dat %>%
+  filter(round == 2) %>%
+  select(experimenter, round, questiontype, inclusive, term) %>%
+  filter(questiontype == 'noprep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+overall_round2_reliability_prep <- dat %>%
+  filter(round == 2) %>%
+  select(experimenter, round, questiontype, inclusive, term) %>%
+  filter(questiontype == 'prep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+
+overall_round1_difference <- overall_round1_reliability_prep$meanresponse - overall_round1_reliability_noprep$meanresponse
+
+overall_round2_difference <- overall_round2_reliability_prep$meanresponse - overall_round2_reliability_noprep$meanresponse
+
+cor.test(overall_round1_difference, overall_round2_difference)
+```
+
+
+#### ICC for Test-Retest - Overall, All Data
+```{r}
+overall_prime_round1 <- as.data.frame(overall_round1_difference)
+overall_prime_round2 <- as.data.frame(overall_round2_difference)
+
+overall_prime_rounds <- cbind(overall_prime_round1, overall_prime_round2)
+
+icc(overall_prime_rounds, model = "twoway", type = "agreement", unit = "single")
+```
+### Global Priming Effect
+
+```{r}
+incl_exp <- dat %>%
+  group_by(experimenter, questiontype)%>%
+  mutate(incl_mean = mean(inclusive, na.rm = TRUE))
+
+p <- ggplot(incl_exp, aes(incl_mean, questiontype,fill = questiontype, alpha = 0.9)) + 
+   geom_boxplot() + 
+  #scale_fill_manual(values = c("#418D87", "#73224E")) + 
+   theme_classic() + 
+   theme( 
+   axis.title.x = element_text(family = "Source Sans Pro"),
+   axis.text.x = element_text(family = "Source Sans Pro"), 
+   axis.title.y = element_text(family = "Source Sans Pro"), 
+   axis.text.y = element_text(family = "Source Sans Pro"), 
+   legend.position = "none",
+   plot.title = element_text(hjust = 0.5)
+   ) + 
+   scale_y_discrete(labels = c("Non-Prep", "Prep"))
+
+p1 <- p + labs(title = "Responses by Question Type",
+                x = "Proportion of Prepositional Responses", 
+                y = "Question Type"
+               ) +
+  scale_fill_grey()
+p1
+
+ggsave("overall_plot.jpeg", plot = p1)
+```
+
+
+### Priming Effect by Experimenter Plots
+
+Plot 1
+```{r}
+overall_prime_noprep_p1 <- dat %>%
+  select(experimenter, round, questiontype, inclusive, splithalf) %>%
+  filter(questiontype == 'noprep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse_noprep = mean(inclusive, na.rm = TRUE))
+
+overall_prime_prep_p1 <- dat %>%
+  select(experimenter, round, questiontype, inclusive, splithalf) %>%
+  filter(questiontype == 'prep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse_prep = mean(inclusive, na.rm = TRUE))
+
+line <- merge(overall_prime_noprep_p1, overall_prime_prep_p1, by = "experimenter")
+
+# make long
+line_long <- gather(line, condition, mean, meanresponse_noprep:meanresponse_prep, factor_key = TRUE)
+
+#rename reponse variables
+line_long$condition <- recode_factor(line_long$condition, meanresponse_noprep  = "noprep",
+                                     meanresponse_prep = "prep")
+
+line_long$experimenter <- as.factor(line_long$experimenter)
+
+#make those labels purdy
+plot_labels <- c("No Preposition", "Preposition")
+
+by_exp_plot <- ggplot(line_long, aes(condition, mean, group = experimenter, color = experimenter)) +
+  geom_line() +
+  theme_classic() +
+  theme(
+    legend.position = "none",
+    plot.title = element_text(hjust = 0.5),
+  ) +
+  labs(title = "Proportion of Priming Elicited by Experimenter per Condition", x = "Condition", y = "Proportion of Prepositional Responses Elicited") +
+  scale_x_discrete(labels = plot_labels)
+
+ggsave("by_exp_plot.jpeg", plot = by_exp_plot)
+```
+
+Plot 2
+```{r}
+overall_prime_noprep_p2 <- dat %>%
+  select(experimenter, round, questiontype, inclusive, splithalf) %>%
+  filter(questiontype == 'noprep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+overall_prime_prep_p2 <- dat %>%
+  select(experimenter, round, questiontype, inclusive, splithalf) %>%
+  filter(questiontype == 'prep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+overall_prime_effect <- overall_prime_noprep_p2$meanresponse - overall_prime_prep_p2$meanresponse
+
+overall_prime <- data.frame(overall_prime_effect) %>% arrange(overall_prime_effect)
+
+overall_prime$row_num <- seq.int(nrow(overall_prime))
+
+
+priming_effect <- ggplot() + 
+  geom_point(data = overall_prime, mapping = aes(x = row_num, y = overall_prime_effect), size = 3, shape = 21, fill = "white") +
+  theme(legend.position ="right") + 
+  labs(x = "Experimenters", y = "Priming Effect", title="Priming Effect by Experimenter") +
+  theme_bw() +
+  theme(
+    panel.border = element_blank(),
+    panel.grid.minor = element_blank(), 
+    panel.grid.major = element_blank(),
+    axis.line = element_line(colour = "black"),
+    axis.title.x = element_text(color = "black", size = 12), 
+    axis.title.y = element_text(color = "black", size = 12), 
+    axis.text.x = element_text(color = "black", size = 9), 
+    axis.text.y = element_text(color = "black", size = 12), 
+    legend.text = element_text(color = "black", size = 12), 
+    plot.title = element_text(color = "black", size = 12, face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+    )
+
+ggsave("primingeffect.jpeg", plot=priming_effect, width = 6, height = 4)
+```
+
+```{r}
+
+sh1_noprep <- dat %>% 
+  select(experimenter, questiontype, inclusive, splithalf) %>%
+  filter(splithalf == 1, questiontype == 'noprep') %>%
+  group_by(experimenter) %>%
+   summarise(meanresponse = mean(inclusive, na.rm=TRUE))
+
+sh1_prep <- dat %>% 
+  select(experimenter, questiontype, inclusive, splithalf) %>%
+  filter(splithalf == 1, questiontype == 'prep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+sh2_noprep <- dat %>% 
+  select(experimenter, questiontype, inclusive, splithalf) %>%
+  filter(splithalf == 2, questiontype == 'noprep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+sh2_prep <- dat %>% 
+  select(experimenter, questiontype, inclusive, splithalf) %>%
+  filter(splithalf == 2, questiontype == 'prep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+sh1_difference <- sh1_prep$meanresponse - sh1_noprep$meanresponse
+
+sh2_difference <- sh2_prep$meanresponse - sh2_noprep$meanresponse
+
+cor.test(sh1_difference, sh2_difference)
+
+sh_scatter <- data.frame(sh1_difference, sh2_difference)
+
+splithalfplot <- ggplot(test_scatter, aes(sh1_difference, sh2_difference)) +
+  geom_point(size = 2) +
+  labs(title = "Split-Half Reliablity", x = "Split-Half 1 Priming Effect", y = "Split-Half 2 Priming Effect") +
+  ylim(-0.1, 0.3) +
+  xlim(-0.1, 0.3) +
+  theme(
+    axis.line = element_line(colour = "black"),
+    axis.title.x = element_text(color = "black", size = 12), 
+    axis.title.y = element_text(color = "black", size = 12),
+    axis.text.x = element_text(color = "black", size = 12), 
+    axis.text.y = element_text(color = "black", size = 12),
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(),
+    plot.title = element_text(color = "black", size = 12, face = "bold", hjust = 0.5)
+  )
+
+ggsave("splithalfplot.jpeg", plot=splithalfplot, width = 6, height = 4)
+```
+
+
+# Plot correlation for test-retest
+```{r}
+r1_noprep <- dat %>% 
+  select(experimenter, round, questiontype, inclusive) %>%
+  filter(round == 1, questiontype == 'noprep') %>%
+  group_by(experimenter) %>%
+   summarise(meanresponse = mean(inclusive, na.rm=TRUE))
+
+r1_prep <- dat %>% 
+  select(experimenter, round, questiontype, inclusive) %>%
+  filter(round == 1, questiontype == 'prep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm=TRUE))
+
+r2_noprep <- dat %>% 
+  select(experimenter, round, questiontype, inclusive) %>%
+  filter(round == 2, questiontype == 'noprep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm=TRUE))
+
+r2_prep <- dat %>% 
+  select(experimenter, round, questiontype, inclusive) %>%
+  filter(round == 2, questiontype == 'prep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm=TRUE))
+
+r1_difference <- r1_prep$meanresponse - r1_noprep$meanresponse
+
+r2_difference <- r2_prep$meanresponse - r2_noprep$meanresponse
+
+test_rounds <- data.frame(r1_difference, r2_difference)
+
+test_retest <- ggplot(test_rounds, aes(r1_difference, r2_difference)) +
+  geom_point(color = "black", size = 2) +
+  labs(x = "Round 1 Difference", y = "Round 2 Difference", title = "Test-Retest Reliability") +
+  xlim(-0.1, 0.3) +
+  theme(
+    axis.line = element_line(colour = "black"),
+    axis.title.x = element_text(color="black", size = 12, family = "Source Sans Pro"), 
+    axis.title.y = element_text(color="black", size = 12, family = "Source Sans Pro"),
+    axis.text.x = element_text(color="black", size = 12, family = "Source Sans Pro"), 
+    axis.text.y = element_text(color="black", size = 12, family = "Source Sans Pro"),
+    panel.grid.major = element_blank(), 
+    panel.grid.minor = element_blank(),
+    panel.background = element_blank(),
+    plot.title = element_text(hjust = 0.5)
+  )
+
+ggsave("testretest.jpeg", plot = test_retest, width = 6, height = 4)
+```
+
+## By Experiment {.tabset}
+
+### Experiment 1 (Spring 2021)
+
+#### Overall, Inclusive, no slope
+```{r}
+exp1 <- dat %>%
+  filter(term == 'sp_21')
+
+exp1_overall_inclusive <- glmer(inclusive ~ questiontype * fragcode + (1 | experimenter), exp1, binomial)
+summary(exp1_overall_inclusive)
+```
+
+
+#### Overall, Inclusive, with slope
+```{r}
+exp1_overall_inclusive_slope <- glmer(inclusive ~ questiontype * fragcode + (1 + questiontype | experimenter), exp1, binomial)
+summary(exp1_overall_inclusive_slope)
+```
+
+
+#### Model Comparison
+```{r}
+anova(exp1_overall_inclusive, exp1_overall_inclusive_slope)
+```
+
+
+#### Splithalf - Experiment 1
+```{r}
+exp1_sh1_noprep <- dat %>%
+  filter(term == 'sp_21') %>%
+  select(experimenter, questiontype, inclusive, splithalf) %>%
+  filter(splithalf == 1, questiontype == 'noprep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+exp1_sh1_prep <- dat %>%
+  filter(term == 'sp_21') %>%
+  select(experimenter, questiontype, inclusive, splithalf) %>%
+  filter(splithalf == 1, questiontype == 'prep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+exp1_sh2_noprep <- dat %>%
+  filter(term == 'sp_21') %>%
+  select(experimenter, questiontype, inclusive, splithalf) %>%
+  filter(splithalf == 2, questiontype == 'noprep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+exp1_sh2_prep <- dat %>%
+  filter(term == 'sp_21') %>%
+  select(experimenter, questiontype, inclusive, splithalf) %>%
+  filter(splithalf == 2, questiontype == 'prep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+
+exp1_sh1_difference <- exp1_sh1_prep$meanresponse - exp1_sh1_noprep$meanresponse
+
+exp1_sh2_difference <- exp1_sh2_prep$meanresponse - exp1_sh2_noprep$meanresponse
+
+cor.test(exp1_sh1_difference, exp1_sh2_difference)
+```
+
+
+#### ICC for Splithalf - Experiment 1
+```{r}
+#make the two priming effects kith
+exp1_prime_sh1 <- as.data.frame(exp1_sh1_difference)
+exp1_prime_sh2 <- as.data.frame(exp1_sh2_difference)
+
+exp1_primes_sh <- cbind(exp1_prime_sh1, exp1_prime_sh2)
+
+icc(exp1_primes_sh, model = "twoway", type = "agreement", unit = "single")
+```
+
+
+#### Test-Retest - Experiment 1
+```{r}
+exp1_round1_reliability_noprep <- dat %>%
+  filter(round == 1 & term == "sp_21") %>%
+  select(experimenter, round, questiontype, inclusive, term) %>%
+  filter(questiontype == 'noprep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+exp1_round1_reliability_prep <- dat %>%
+  filter(round == 1 & term == "sp_21") %>%
+  select(experimenter, round, questiontype, inclusive, term) %>%
+  filter(questiontype == 'prep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+exp1_round2_reliability_noprep <- dat %>%
+  filter(round == 2 & term == "sp_21") %>%
+  select(experimenter, round, questiontype, inclusive, term) %>%
+  filter(questiontype == 'noprep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+exp1_round2_reliability_prep <- dat %>%
+  filter(round == 2 & term == "sp_21") %>%
+  select(experimenter, round, questiontype, inclusive, term) %>%
+  filter(questiontype == 'prep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+exp1_round1_difference <- exp1_round1_reliability_prep$meanresponse - exp1_round1_reliability_noprep$meanresponse
+
+exp1_round2_difference <- exp1_round2_reliability_prep$meanresponse - exp1_round2_reliability_noprep$meanresponse
+
+cor.test(exp1_round1_difference, exp1_round2_difference)
+```
+
+
+#### ICC for Test-Retest - Experiment 1
+```{r}
+exp2_prime_round1 <- as.data.frame(exp1_round1_difference)
+exp2_prime_round2 <- as.data.frame(exp1_round2_difference)
+
+exp2_prime_rounds <- cbind(exp2_prime_round1, exp2_prime_round2)
+
+icc(exp2_prime_rounds, model = "twoway", type = "agreement", unit = "single")
+```
+
+
+### Experiment 2 (Summer 2021, Fall 2021) 
+
+#### Overall, Inclusive, no slope
+```{r}
+# subset first
+exp2 <- dat %>%
+  filter(term == 'su_21' | term == "fa_21")
+
+exp2_overall_inclusive <- glmer(inclusive ~ questiontype * fragcode + (1 | experimenter), exp2, binomial)
+
+summary(exp2_overall_inclusive)
+```
+
+
+#### Overall, Inclusive with slope
+```{r}
+exp2_overall_inclusive_slope <- glmer(inclusive ~ questiontype * fragcode + (1 + questiontype | experimenter), exp2, binomial)
+
+summary(exp2_overall_inclusive_slope)
+```
+
+
+#### Model Comparison
+```{r}
+anova(exp2_overall_inclusive, exp2_overall_inclusive_slope)
+```
+
+
+#### Splithalf - Experiment 2
+```{r}
+exp2_sh1_noprep <- dat %>%
+  filter(term == 'su_21' | term == 'fa_21') %>%
+  select(experimenter, splithalf, questiontype, inclusive) %>%
+  filter(splithalf == 1, questiontype == 'noprep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+
+exp2_sh1_prep <- dat %>%
+  filter(term == 'su_21' | term == 'fa_21') %>%
+  select(experimenter, splithalf, questiontype, inclusive) %>%
+  filter(splithalf == 1, questiontype == 'prep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+exp2_sh2_noprep <- dat %>%
+  filter(term == 'su_21' | term == 'fa_21') %>%
+  select(experimenter, splithalf, questiontype, inclusive) %>%
+  filter(splithalf == 2, questiontype == 'noprep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+
+exp2_sh2_prep <- dat %>%
+  filter(term == 'su_21' | term == 'fa_21') %>%
+  select(experimenter, questiontype, inclusive, splithalf) %>%
+  filter(splithalf == 2, questiontype == 'prep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+
+exp2_sh1_difference <- exp2_sh1_prep$meanresponse - exp2_sh1_noprep$meanresponse
+
+exp2_sh2_difference <- exp2_sh2_prep$meanresponse - exp2_sh2_noprep$meanresponse
+
+
+cor.test(exp2_sh1_difference, exp2_sh2_difference)
+```
+
+
+#### ICC for Splithalf - Experiment 2
+```{r}
+#make the two priming effects kith
+exp2_prime_sh1 <- as.data.frame(exp2_sh1_difference)
+exp2_prime_sh2 <- as.data.frame(exp2_sh2_difference)
+
+exp2_primes_sh <- cbind(exp1_prime_sh1, exp1_prime_sh2)
+
+icc(exp2_primes_sh, model = "twoway", type = "agreement", unit = "single")
+```
+
+
+#### Test-Retest - Experiment 2
+```{r}
+exp2_round1_reliability_noprep <- dat %>%
+  filter(round == 1 & term == "su_21" | round == 1 & term == "fa_21") %>%
+  select(experimenter, round, questiontype, inclusive, term) %>%
+  filter(questiontype == 'noprep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+exp2_round1_reliability_prep <- dat %>%
+  filter(round == 1 & term == "su_21" | round == 1 & term == "fa_21") %>%
+  select(experimenter, round, questiontype, inclusive, term) %>%
+  filter(questiontype == 'prep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+exp2_round2_reliability_noprep <- dat %>%
+  filter(round == 2 & term == "su_21" | round == 2 & term == "fa_21") %>%
+  select(experimenter, round, questiontype, inclusive, term) %>%
+  filter(questiontype == 'noprep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+
+exp2_round2_reliability_prep <- dat %>%
+  filter(round == 2 & term == "su_21" | round == 2 & term == "fa_21") %>%
+  select(experimenter, round, questiontype, inclusive, term) %>%
+  filter(questiontype == 'prep') %>%
+  group_by(experimenter) %>%
+  summarise(meanresponse = mean(inclusive, na.rm = TRUE))
+
+
+exp2_round1_difference <- exp2_round1_reliability_prep$meanresponse - exp2_round1_reliability_noprep$meanresponse
+
+exp2_round2_difference <- exp2_round2_reliability_prep$meanresponse - exp2_round2_reliability_noprep$meanresponse
+
+cor.test(exp2_round1_difference, exp2_round2_difference)
+```
+
+
+#### ICC for Test-Retest - Experiment 2
+```{r}
+#make the two priming effects kith
+exp2_prime_sh1 <- as.data.frame(exp2_round1_difference)
+exp2_prime_sh2 <- as.data.frame(exp2_round2_difference)
+
+exp2_primes <- cbind(exp2_prime_sh1, exp2_prime_sh2)
+
+icc(exp2_primes, model = "twoway", type = "agreement", unit = "single")
+```
+
+
+## Exploratory {.tabset}
+
+### Path Model
+```{r}
+modelIM = '
+answer~conventional+direct+rating+dollarsigns+questiontype
+
+full~conventional+direct+answer+rating+dollarsigns+questiontype
+
+IM~full+conventional+direct+answer+rating+dollarsigns+questiontype'
+
+fitIM <- sem(model = modelIM, data = dat)
+summary(fitIM)
+
+```
+
+```{r}
+labels <- list(questiontype = "Question Type", conventional = "Conventional", direct = "Direct", dollarsigns = "Dollar Signs", rating = "Rating", answer = "Answer", full = "Full Sentence", IM = "Prep Match")
+
+#lavaanPlot(model = fitIM, labels = labels,
+           #node_options = list(shape = "box", 
+                               #fontname = "Helvetica"), 
+           #edge_options = list(color = "grey"), 
+           #coefs = FALSE)
+
+lavaanPlot(model = fitIM, labels = labels,
+           node_options = list(shape = "box", 
+                               fontname = "Helvetica"), 
+           edge_options = list(color = "grey"), 
+           coefs = FALSE, sig = .05, stars="regress")
+
+```
+
