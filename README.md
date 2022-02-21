@@ -3,7 +3,7 @@
 ![splithalfplot](https://github.com/katchia/it-s-not-you-it-s-me-individual-difference-paper/blob/main/splithalfplot.jpeg)
 A repository of my dissertation (brief report).
 
-We had 43 experimenters call ~600 businesses each. They asked either _At/What time do you close_? When asked prepositional questions, participants used prepositions in their answers (i.e., _We close at 10, Around 10_). 
+We had 43 experimenters call ~1000 businesses each. They asked either _At/What time do you close_? When asked prepositional questions, participants used prepositions in their answers (i.e., _We close at 10, Around 10_). 
 
 This effect was first reported in Levelt and Kelter’s (1982) Experiment 3 and has since been replicated by our lab. However, we note that although there is a tendency for participants to produce more prepositional answers following prepositional questions, the effect reported by our various extensions and replications (Chia et al., 2019; 2020; Chia et al., under review; Chia & Kaschak, under review) is not always statistically reliable in individual experiments even though it is quite robust across experiments. One interesting feature of our earlier experiments is the finding that different experimenters appear to elicit priming effects of different magnitudes. 
 
