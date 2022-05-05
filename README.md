@@ -1,7 +1,7 @@
 # it-s-not-you-it-s-me-dissertation
 
 ![splithalfplot](https://github.com/katchia/it-s-not-you-it-s-me-individual-difference-paper/blob/main/splithalfplot.jpeg)
-A repository of my dissertation (brief report).
+A repository of my dissertation.
 
 We had 42 experimenters call ~1000 businesses each. They asked either _At/What time do you close_? When asked prepositional questions, participants used prepositions in their answers (i.e., _We close at 10, Around 10_). 
 
