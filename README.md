@@ -9,4 +9,4 @@ This effect was first reported in Levelt and Kelter’s (1982) Experiment 3 and 
 
 As there were different sets of experimenters across our studies, it is possible that experimenter effects may explain the different effect sizes across studies. The potential that individual experimenters elicit different priming effects is interesting as a possible explanation for what I have observed in my research using this paradigm. It is also interesting on a broader theoretical level, as there is a long-standing question about whether individual speakers elicit more matching from their conversation partners than other speakers. The goal of my dissertation project will therefore be to establish whether there are genuine, reliable individual differences in the extent to which individual speakers elicit priming effects. 
 
-The paper is currently under review.
+The paper is published [here](https://online.ucpress.edu/collabra/article/8/1/36312/185252/It-s-Not-You-It-s-Me-Some-Speakers-Elicit).
